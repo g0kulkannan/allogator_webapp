@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlloPred - Allosteric Site Prediction</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AlloPred</h1>
+            <p class="subtitle">Allosteric Site Prediction using ESM1b Attention</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <form id="prediction-form">
+                    <div class="form-group">
+                        <label for="sequence">Protein Sequence</label>
+                        <textarea
+                            id="sequence"
+                            name="sequence"
+                            placeholder="Enter amino acid sequence (e.g., MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSR...)"
+                            rows="6"
+                            required
+                        ></textarea>
+                        <span class="char-count"><span id="seq-length">0</span> residues</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="active-residues">Active Site Residues</label>
+                        <input
+                            type="text"
+                            id="active-residues"
+                            name="active_residues"
+                            placeholder="e.g., 45, 67, 89-95, 120"
+                            required
+                        >
+                        <span class="help-text">Comma-separated residue numbers. Ranges supported (e.g., 10-20).</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pdb-code">PDB Code (optional)</label>
+                        <input
+                            type="text"
+                            id="pdb-code"
+                            name="pdb_code"
+                            placeholder="e.g., 1ATP"
+                            maxlength="4"
+                        >
+                        <span class="help-text">For colored structure download. Leave empty if not needed.</span>
+                    </div>
+
+                    <button type="submit" id="submit-btn">
+                        <span class="btn-text">Run Prediction</span>
+                        <span class="btn-loading" style="display: none;">Processing...</span>
+                    </button>
+                </form>
+            </section>
+
+            <section class="results-section" id="results" style="display: none;">
+                <h2>Results</h2>
+
+                <div class="download-buttons">
+                    <button id="download-csv" class="download-btn">Download CSV</button>
+                    <button id="download-pdb-raw" class="download-btn" style="display: none;">Download PDB (Raw Scores)</button>
+                    <button id="download-pdb-rank" class="download-btn" style="display: none;">Download PDB (Rank Scores)</button>
+                </div>
+
+                <div class="plot-container">
+                    <div id="attention-plot"></div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Score Table</h3>
+                    <div class="table-wrapper">
+                        <table id="scores-table">
+                            <thead>
+                                <tr>
+                                    <th>Residue</th>
+                                    <th>Amino Acid</th>
+                                    <th>Raw Score</th>
+                                    <th>Rank Score</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="error-section" id="error" style="display: none;">
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p id="error-text"></p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>AlloPred uses ESM1b attention patterns to predict allosteric sites.</p>
+            <p>Color PDB files by B-factor in PyMOL: <code>spectrum b, plasma</code></p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
