@@ -3,19 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlloPred - Allosteric Site Prediction</title>
+    <title>AlloGator - Allosteric Site Prediction</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>AlloPred</h1>
+            <h1>AlloGator</h1>
             <p class="subtitle">Allosteric Site Prediction using ESM1b Attention</p>
         </header>
 
+        <section class="about-section">
+            <h2>About</h2>
+            <p>
+                AlloGator predicts allosteric sites in proteins using attention patterns from the ESM1b protein language model.
+                Given a protein sequence and known active site residues, it identifies residues likely to be allosteric regulators.
+            </p>
+            <div class="citation-box">
+                <strong>Citation:</strong> Kannan et al., 2024 bioRxiv<br>
+                <a href="https://www.biorxiv.org/content/10.1101/2024.10.03.616547v1" target="_blank">
+                    https://www.biorxiv.org/content/10.1101/2024.10.03.616547v1
+                </a>
+            </div>
+            <div class="notes">
+                <strong>Important Notes:</strong>
+                <ul>
+                    <li>All proteins are treated as <strong>monomers</strong> - benchmarking was performed on single-chain protein sequences.</li>
+                    <li>Maximum sequence length: 1022 amino acids (ESM1b limit).</li>
+                    <li>Active site residues should be provided as 1-indexed positions.</li>
+                    <li>Higher attention scores indicate stronger predicted allosteric coupling to the active site.</li>
+                </ul>
+            </div>
+        </section>
+
         <main>
             <section class="input-section">
+                <h2>Input</h2>
                 <form id="prediction-form">
                     <div class="form-group">
                         <label for="sequence">Protein Sequence</label>
@@ -38,7 +62,7 @@
                             placeholder="e.g., 45, 67, 89-95, 120"
                             required
                         >
-                        <span class="help-text">Comma-separated residue numbers. Ranges supported (e.g., 10-20).</span>
+                        <span class="help-text">Comma-separated residue numbers (1-indexed). Ranges supported (e.g., 10-20).</span>
                     </div>
 
                     <div class="form-group">
@@ -55,7 +79,7 @@
 
                     <button type="submit" id="submit-btn">
                         <span class="btn-text">Run Prediction</span>
-                        <span class="btn-loading" style="display: none;">Processing...</span>
+                        <span class="btn-loading" style="display: none;">Processing... (may take 30-60 seconds)</span>
                     </button>
                 </form>
             </section>
@@ -70,11 +94,12 @@
                 </div>
 
                 <div class="plot-container">
-                    <div id="attention-plot"></div>
+                    <h3>Attention Score Plot</h3>
+                    <div id="attention-plot" style="width: 100%; height: 450px;"></div>
                 </div>
 
                 <div class="table-container">
-                    <h3>Score Table</h3>
+                    <h3>Score Table (sorted by rank)</h3>
                     <div class="table-wrapper">
                         <table id="scores-table">
                             <thead>
@@ -82,7 +107,7 @@
                                     <th>Residue</th>
                                     <th>Amino Acid</th>
                                     <th>Raw Score</th>
-                                    <th>Rank Score</th>
+                                    <th>Rank Score (%)</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -100,8 +125,13 @@
         </main>
 
         <footer>
-            <p>AlloPred uses ESM1b attention patterns to predict allosteric sites.</p>
-            <p>Color PDB files by B-factor in PyMOL: <code>spectrum b, plasma</code></p>
+            <p>
+                <strong>Visualization tip:</strong> Color PDB files by B-factor in PyMOL: <code>spectrum b, plasma</code>
+                or in ChimeraX: <code>color byattribute bfactor palette plasma</code>
+            </p>
+            <p>
+                AlloGator &copy; 2024 | <a href="https://www.biorxiv.org/content/10.1101/2024.10.03.616547v1" target="_blank">Kannan et al., 2024</a>
+            </p>
         </footer>
     </div>
 

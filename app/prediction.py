@@ -1,6 +1,8 @@
 """
-ESM1b-based allosteric site prediction scoring.
-Adapted from AlloPred.py
+AlloGator - ESM1b-based allosteric site prediction scoring.
+
+Kannan et al., 2024 bioRxiv
+https://www.biorxiv.org/content/10.1101/2024.10.03.616547v1
 """
 
 import os

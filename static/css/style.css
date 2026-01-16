@@ -20,7 +20,7 @@ body {
 header {
     text-align: center;
     padding: 40px 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     border-radius: 8px;
     margin-bottom: 30px;
@@ -36,12 +36,69 @@ header .subtitle {
     opacity: 0.9;
 }
 
+/* About Section */
+.about-section {
+    background: white;
+    padding: 25px 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.about-section h2 {
+    color: #2e7d32;
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+}
+
+.about-section p {
+    margin-bottom: 15px;
+    color: #555;
+}
+
+.citation-box {
+    background: #e8f5e9;
+    border-left: 4px solid #2e7d32;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.citation-box a {
+    color: #1b5e20;
+    word-break: break-all;
+}
+
+.notes {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 4px;
+}
+
+.notes ul {
+    margin-left: 20px;
+    margin-top: 10px;
+}
+
+.notes li {
+    margin-bottom: 8px;
+    color: #555;
+}
+
 .input-section {
     background: white;
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
+}
+
+.input-section h2 {
+    color: #2e7d32;
+    margin-bottom: 20px;
+    font-size: 1.4rem;
 }
 
 .form-group {
@@ -69,7 +126,7 @@ header .subtitle {
 .form-group input:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #2e7d32;
 }
 
 .form-group textarea {
@@ -95,7 +152,7 @@ header .subtitle {
 button[type="submit"] {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     border: none;
     border-radius: 6px;
@@ -107,7 +164,7 @@ button[type="submit"] {
 
 button[type="submit"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4);
 }
 
 button[type="submit"]:disabled {
@@ -126,7 +183,13 @@ button[type="submit"]:disabled {
 
 .results-section h2 {
     margin-bottom: 20px;
-    color: #333;
+    color: #2e7d32;
+}
+
+.results-section h3 {
+    margin-bottom: 15px;
+    color: #444;
+    font-size: 1.1rem;
 }
 
 .download-buttons {
@@ -138,7 +201,7 @@ button[type="submit"]:disabled {
 
 .download-btn {
     padding: 10px 20px;
-    background: #4CAF50;
+    background: #2e7d32;
     color: white;
     border: none;
     border-radius: 6px;
@@ -148,28 +211,24 @@ button[type="submit"]:disabled {
 }
 
 .download-btn:hover {
-    background: #45a049;
+    background: #1b5e20;
 }
 
 .plot-container {
     margin-bottom: 30px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
-    overflow: hidden;
+    padding: 15px;
+    background: #fafafa;
 }
 
 #attention-plot {
     width: 100%;
-    height: 400px;
+    min-height: 450px;
 }
 
 .table-container {
     margin-top: 20px;
-}
-
-.table-container h3 {
-    margin-bottom: 15px;
-    color: #444;
 }
 
 .table-wrapper {
@@ -230,6 +289,14 @@ footer {
     padding: 30px;
     color: #666;
     font-size: 14px;
+}
+
+footer p {
+    margin-bottom: 10px;
+}
+
+footer a {
+    color: #2e7d32;
 }
 
 footer code {

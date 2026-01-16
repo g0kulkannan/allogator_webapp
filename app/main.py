@@ -1,5 +1,9 @@
 """
-AlloPred Web Application - FastAPI Backend
+AlloGator Web Application - FastAPI Backend
+
+Allosteric site prediction using ESM1b attention scores.
+Paper: Kannan et al., 2024 bioRxiv
+https://www.biorxiv.org/content/10.1101/2024.10.03.616547v1
 """
 
 import os
@@ -17,8 +21,8 @@ from .pdb_utils import get_colored_pdbs
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="AlloPred",
-    description="Allosteric site prediction using ESM1b attention scores",
+    title="AlloGator",
+    description="Allosteric site prediction using ESM1b attention scores. Kannan et al., 2024 bioRxiv.",
     version="1.0.0"
 )
 
@@ -177,7 +181,7 @@ async def download_csv(job_id: str):
     return Response(
         content=csv_content,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=allopred_scores_{job_id}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=allogator_scores_{job_id}.csv"}
     )
 
 
