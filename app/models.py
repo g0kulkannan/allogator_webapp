@@ -70,45 +70,50 @@ _register(ModelSpec(
     aliases=["esm-1b", "esm1b_t33_650M_UR50S"],
 ))
 
-_register(ModelSpec(
-    key="esm2_650m",
-    name="ESM-2 (650M)",
-    backend="esm",
-    source="esm2_t33_650M_UR50D",
-    params="650M",
-    approx_ram_gb=2.6,
-    num_layers=33,
-    recommended=False,
-    blurb="Same size as ESM-1b but trained for contact prediction; "
-          "slightly weaker allosteric signal in the paper.",
-    aliases=["esm2", "esm-2", "esm2_t33_650M_UR50D"],
-))
-
-_register(ModelSpec(
-    key="prott5",
-    name="ProtT5-XL",
-    backend="prott5",
-    source="Rostlab/prot_t5_xl_half_uniref50-enc",
-    params="~3B",
-    approx_ram_gb=3.0,
-    recommended=False,
-    blurb="Independently trained T5-encoder model; performs comparably to "
-          "ESM-1b, showing the signal is not ESM-specific. Larger / slower.",
-    aliases=["prot_t5", "prot-t5", "prott5_xl"],
-))
-
-_register(ModelSpec(
-    key="esmpp",
-    name="ESM++ (ESM-C)",
-    backend="esmpp",
-    source="Synthyra/ESMplusplus_large",
-    params="~600M",
-    approx_ram_gb=2.4,
-    recommended=False,
-    blurb="Open re-implementation of ESM-C. Trained for contact prediction; "
-          "underperforms ESM-1b on allosteric signal in the paper.",
-    aliases=["esm++", "esmc", "esm-c", "esmplusplus"],
-))
+# NOTE: Only ESM-1b is registered for the live deployment, to keep the Docker
+# image small and reliable on a small Railway instance. The other three models
+# from the paper (ESM-2 650M, ProtT5-XL, ESM++) are kept below, commented out,
+# so they can be re-enabled once the service has enough memory and a persistent
+# volume for their weights. Re-registering them also requires re-adding the
+# HuggingFace deps (transformers, sentencepiece, protobuf, einops) to
+# requirements.txt for the ProtT5 / ESM++ backends.
+#
+# _register(ModelSpec(
+#     key="esm2_650m",
+#     name="ESM-2 (650M)",
+#     backend="esm",
+#     source="esm2_t33_650M_UR50D",
+#     params="650M",
+#     approx_ram_gb=2.6,
+#     num_layers=33,
+#     blurb="Same size as ESM-1b but trained for contact prediction; "
+#           "slightly weaker allosteric signal in the paper.",
+#     aliases=["esm2", "esm-2", "esm2_t33_650M_UR50D"],
+# ))
+#
+# _register(ModelSpec(
+#     key="prott5",
+#     name="ProtT5-XL",
+#     backend="prott5",
+#     source="Rostlab/prot_t5_xl_half_uniref50-enc",
+#     params="~3B",
+#     approx_ram_gb=3.0,
+#     blurb="Independently trained T5-encoder model; performs comparably to "
+#           "ESM-1b, showing the signal is not ESM-specific. Larger / slower.",
+#     aliases=["prot_t5", "prot-t5", "prott5_xl"],
+# ))
+#
+# _register(ModelSpec(
+#     key="esmpp",
+#     name="ESM++ (ESM-C)",
+#     backend="esmpp",
+#     source="Synthyra/ESMplusplus_large",
+#     params="~600M",
+#     approx_ram_gb=2.4,
+#     blurb="Open re-implementation of ESM-C. Trained for contact prediction; "
+#           "underperforms ESM-1b on allosteric signal in the paper.",
+#     aliases=["esm++", "esmc", "esm-c", "esmplusplus"],
+# ))
 
 
 DEFAULT_MODEL_KEY = "esm1b"

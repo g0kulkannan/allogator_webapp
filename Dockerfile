@@ -18,16 +18,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App code
 COPY . .
 
-# Model weights cache lives inside the image
+# Model weights cache location. Point this at a mounted volume on Railway
+# (e.g. TORCH_HOME=/data/torch) to persist weights across restarts.
 ENV TORCH_HOME=/app/models
 ENV PYTHONUNBUFFERED=1
 
-# Which model(s) to bake into the image at build time. Space-separated keys
-# from app/models.py. Default: just the recommended ESM-1b. Set to empty to
-# skip baking (weights download lazily on first request instead).
-ARG PREDOWNLOAD_MODELS="esm1b"
-ENV PREDOWNLOAD_MODELS=${PREDOWNLOAD_MODELS}
-RUN python -m app.predownload || echo "Skipping model pre-download"
+# Weights are NOT baked into the image (that produced a multi-GB image that
+# could fail to deploy). ESM-1b downloads lazily on the first prediction and
+# is then cached. To bake it in instead, set PREDOWNLOAD_MODELS at build time
+# and uncomment the predownload step below.
+# ARG PREDOWNLOAD_MODELS="esm1b"
+# ENV PREDOWNLOAD_MODELS=${PREDOWNLOAD_MODELS}
+# RUN python -m app.predownload || echo "Skipping model pre-download"
 
 # Railway provides $PORT; default to 8000 locally.
 ENV PORT=8000

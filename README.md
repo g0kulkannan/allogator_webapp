@@ -14,10 +14,13 @@ Allosteric Residue Prediction with Protein Language Models*, Cell Systems
 
 ## What it does
 
-- **The paper's four models.** ESM-1b (recommended — highest median per-protein
-  AUROC in the paper), ESM-2 650M, ProtT5-XL, and ESM++ (an open ESM-C
-  re-implementation). Models load lazily and an LRU cap (default **one** model
-  resident) keeps the container within memory on a small instance.
+- **ESM-1b** (recommended — highest median per-protein AUROC in the paper).
+  The other three models from the paper (ESM-2 650M, ProtT5-XL, ESM++) are
+  present in the code but disabled for the live deployment to keep the image
+  small and reliable on a small instance; re-enable them in `app/models.py`
+  (and re-add the HuggingFace deps) once you have more memory and a persistent
+  volume. The model loads **lazily on the first prediction** — the server
+  itself boots instantly.
 - **Clear scores.** Results lead with the **rank percentile** (the paper's
   headline metric), flag the top decile, and show a per-residue plot, a 3D
   structure view, and a sortable/filterable table.

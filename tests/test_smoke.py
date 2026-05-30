@@ -14,20 +14,15 @@ def test_model_registry():
     from app import models
     pub = models.list_public_models()
     keys = {m["key"] for m in pub}
-    assert keys == {"esm1b", "esm2_650m", "prott5", "esmpp"}, keys
-    # exactly one recommended, and it is the default ESM-1b
+    # Live deployment registers ESM-1b only (others disabled in models.py).
+    assert "esm1b" in keys
     rec = [m for m in pub if m["recommended"]]
     assert len(rec) == 1 and rec[0]["key"] == "esm1b"
     assert models.DEFAULT_MODEL_KEY == "esm1b"
     assert models.get_spec(None).key == "esm1b"
-    # backends are tagged
     assert models.get_spec("esm1b").backend == "esm"
-    assert models.get_spec("prott5").backend == "prott5"
-    assert models.get_spec("esmpp").backend == "esmpp"
     # alias resolution
     assert models.get_spec("esm-1b").key == "esm1b"
-    assert models.get_spec("esm++").key == "esmpp"
-    assert models.get_spec("prot_t5").key == "prott5"
     # unknown -> ValueError
     try:
         models.get_spec("not-a-model")
