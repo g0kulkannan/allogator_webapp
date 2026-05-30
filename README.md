@@ -34,8 +34,8 @@ Allosteric Residue Prediction with Protein Language Models*, Cell Systems
 
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-# open http://localhost:8000
+uvicorn app.main:app --reload --port 8080
+# open http://localhost:8080
 ```
 
 The first prediction downloads the selected model's weights (~30–60 s for
@@ -70,7 +70,7 @@ they're cached).
 | `ALLOGATOR_CACHE_DIR` | system temp | Where job results / generated PDBs are stored. |
 | `ALLOGATOR_CACHE_TTL` | `21600` | Job retention in seconds (6 h). |
 | `ALLOGATOR_CACHE_MAX` | `200` | Max stored jobs before oldest are pruned. |
-| `PORT` | `8000` | Server port (Railway sets this). |
+| `PORT` | `8080` | Server port (Railway injects this and routes its proxy to it). |
 
 > Memory note: each model is large (ESM-1b ~2.6 GB, ESM-2 650M ~2.6 GB,
 > ProtT5-XL ~3 GB, ESM++ ~2.4 GB in fp32). With `ALLOGATOR_MAX_MODELS=1`

@@ -31,8 +31,9 @@ ENV PYTHONUNBUFFERED=1
 # ENV PREDOWNLOAD_MODELS=${PREDOWNLOAD_MODELS}
 # RUN python -m app.predownload || echo "Skipping model pre-download"
 
-# Railway provides $PORT; default to 8000 locally.
-ENV PORT=8000
-EXPOSE 8000
+# Railway injects $PORT at runtime and routes its public proxy to it. Expose
+# the same default so port auto-detection isn't misled. Locally, $PORT is
+# unset and the app falls back to 8080.
+EXPOSE 8080
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
