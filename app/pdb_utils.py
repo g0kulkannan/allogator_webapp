@@ -1,151 +1,106 @@
 """
-PDB download and B-factor modification utilities.
+PDB download and B-factor annotation utilities.
+
+Used to produce structure files whose B-factor column carries the AlloGator
+score, so users can color a structure by predicted allosteric coupling in
+PyMOL / ChimeraX / Mol* with a single command.
 """
 
+from typing import Dict, List, Optional, Tuple
+
 import requests
-from typing import List, Dict, Optional, Tuple
-import numpy as np
 
 
 def download_pdb(pdb_code: str) -> Optional[str]:
     """
-    Download PDB file from PDBrenum (renumbered) or fallback to RCSB.
-
-    Args:
-        pdb_code: 4-character PDB code
-
-    Returns:
-        PDB file content as string, or None if download fails
+    Fetch a PDB file. Tries PDBrenum (UniProt-renumbered, matching the paper's
+    convention) first, then falls back to RCSB.
     """
     pdb_code = pdb_code.lower().strip()
 
-    # Try PDBrenum first (renumbered PDB)
-    pdbrenum_url = f"http://dunbrack3.fccc.edu/PDBrenum/output_PDB/{pdb_code}_renum.pdb"
+    pdbrenum_url = (
+        f"https://dunbrack3.fccc.edu/PDBrenum/output_PDB/{pdb_code}_renum.pdb"
+    )
     try:
-        response = requests.get(pdbrenum_url, timeout=30)
-        if response.status_code == 200 and response.text.strip():
-            return response.text
+        r = requests.get(pdbrenum_url, timeout=30)
+        if r.status_code == 200 and r.text.strip():
+            return r.text
     except requests.RequestException:
         pass
 
-    # Fallback to RCSB PDB
     rcsb_url = f"https://files.rcsb.org/download/{pdb_code.upper()}.pdb"
     try:
-        response = requests.get(rcsb_url, timeout=30)
-        if response.status_code == 200:
-            return response.text
+        r = requests.get(rcsb_url, timeout=30)
+        if r.status_code == 200 and r.text.strip():
+            return r.text
     except requests.RequestException:
         pass
 
     return None
 
 
-def normalize_scores(scores: List[float], min_val: float = 0, max_val: float = 100) -> List[float]:
-    """Normalize scores to a given range."""
-    if not scores:
-        return scores
-
-    score_min = min(scores)
-    score_max = max(scores)
-
-    if score_max == score_min:
-        return [50.0] * len(scores)
-
-    normalized = []
-    for s in scores:
-        norm = (s - score_min) / (score_max - score_min)
-        normalized.append(min_val + norm * (max_val - min_val))
-
-    return normalized
+def normalize_scores(values: List[float], lo: float = 0.0, hi: float = 100.0) -> List[float]:
+    """Linearly rescale values into [lo, hi]. Constant input maps to the midpoint."""
+    if not values:
+        return values
+    vmin, vmax = min(values), max(values)
+    if vmax == vmin:
+        return [(lo + hi) / 2.0] * len(values)
+    return [lo + (v - vmin) / (vmax - vmin) * (hi - lo) for v in values]
 
 
 def modify_bfactor(
     pdb_content: str,
     residue_scores: Dict[int, float],
-    chain: str = None
+    chain: Optional[str] = None,
 ) -> str:
     """
-    Modify B-factor column in PDB file with scores.
-
-    Args:
-        pdb_content: Original PDB file content
-        residue_scores: Dict mapping residue number to score (0-100 range)
-        chain: Optional chain ID to modify (if None, modifies all chains)
-
-    Returns:
-        Modified PDB content with B-factors replaced by scores
+    Replace the B-factor column of each ATOM/HETATM record with the score for
+    that residue (0 where no score exists). Fixed-width PDB columns:
+    chain = col 22 (0-idx 21), residue number = cols 23-26, B-factor = cols 61-66.
     """
-    lines = pdb_content.split('\n')
-    modified_lines = []
-
-    for line in lines:
-        if line.startswith('ATOM') or line.startswith('HETATM'):
-            # PDB format: columns are fixed width
-            # Residue number: columns 23-26 (1-indexed)
-            # Chain ID: column 22 (1-indexed)
-            # B-factor: columns 61-66 (1-indexed)
-
+    out = []
+    for line in pdb_content.split("\n"):
+        if line.startswith(("ATOM", "HETATM")):
             try:
                 res_num = int(line[22:26].strip())
                 chain_id = line[21]
-
-                # Check if we should modify this residue
                 if chain is not None and chain_id != chain:
-                    modified_lines.append(line)
+                    out.append(line)
                     continue
-
-                if res_num in residue_scores:
-                    score = residue_scores[res_num]
-                    # Format B-factor as 6 characters, right-justified with 2 decimal places
-                    bfactor_str = f"{score:6.2f}"
-                    # Replace B-factor column (columns 61-66, 0-indexed: 60-66)
-                    new_line = line[:60] + bfactor_str + line[66:]
-                    modified_lines.append(new_line)
-                else:
-                    # Set B-factor to 0 for residues without scores
-                    new_line = line[:60] + "  0.00" + line[66:]
-                    modified_lines.append(new_line)
+                score = residue_scores.get(res_num, 0.0)
+                out.append(line[:60] + f"{score:6.2f}" + line[66:])
             except (ValueError, IndexError):
-                modified_lines.append(line)
+                out.append(line)
         else:
-            modified_lines.append(line)
-
-    return '\n'.join(modified_lines)
+            out.append(line)
+    return "\n".join(out)
 
 
 def get_colored_pdbs(
     pdb_code: str,
-    scores: List[Dict]
+    scores: List[Dict],
+    active_residues: Optional[List[int]] = None,
 ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
-    Download PDB and create colored versions based on scores.
-
-    Args:
-        pdb_code: 4-character PDB code
-        scores: List of score dicts with 'residue', 'raw_score', 'rank_score'
-
-    Returns:
-        Tuple of (original_pdb, raw_score_pdb, rank_score_pdb)
-        Any can be None if processing fails
+    Download a structure and return (original, raw-score-colored, rank-colored)
+    PDB strings. Active-site residues, if given, are written as B-factor = 100
+    in the rank file so they remain visible as the anchor.
     """
-    # Download PDB
     pdb_content = download_pdb(pdb_code)
     if pdb_content is None:
         return None, None, None
 
-    # Create residue -> score mappings
-    raw_scores = {s['residue']: s['raw_score'] for s in scores}
-    rank_scores = {s['residue']: s['rank_score'] for s in scores}
+    raw_scores = {s["residue"]: s["raw_score"] for s in scores}
+    rank_scores = {s["residue"]: s["rank_score"] for s in scores}
 
-    # Normalize raw scores to 0-100 range for B-factor visualization
-    raw_values = list(raw_scores.values())
-    normalized_raw = normalize_scores(raw_values, 0, 100)
-    raw_scores_normalized = {
-        res: norm for res, norm in zip(raw_scores.keys(), normalized_raw)
-    }
+    normalized = normalize_scores(list(raw_scores.values()), 0, 100)
+    raw_norm = {res: nv for res, nv in zip(raw_scores.keys(), normalized)}
 
-    # Create colored PDB files
-    pdb_raw = modify_bfactor(pdb_content, raw_scores_normalized)
+    if active_residues:
+        for ar in active_residues:
+            rank_scores.setdefault(ar, 100.0)
+
+    pdb_raw = modify_bfactor(pdb_content, raw_norm)
     pdb_rank = modify_bfactor(pdb_content, rank_scores)
-
     return pdb_content, pdb_raw, pdb_rank

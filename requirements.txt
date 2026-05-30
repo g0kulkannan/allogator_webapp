@@ -2,8 +2,11 @@ fastapi==0.109.0
 uvicorn[standard]==0.27.0
 torch>=2.0.0
 fair-esm==2.0.0
-numpy>=1.24.0
-pandas>=2.0.0
+transformers>=4.36.0,<4.46.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+einops>=0.7.0
+numpy>=1.24.0,<2.0.0
 requests>=2.31.0
 jinja2>=3.1.0
 python-multipart>=0.0.6
