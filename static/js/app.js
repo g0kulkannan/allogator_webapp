@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/api/examples/' + this.value).then(r => r.json()).then(e => {
             sequenceInput.value = e.sequence;
             document.getElementById('active-residues').value = e.active_residues;
+            if (e.pdb) document.getElementById('pdb-code').value = e.pdb;
             seqLengthSpan.textContent = e.sequence.length;
         });
     });
@@ -96,6 +97,14 @@ document.addEventListener('DOMContentLoaded', function () {
         btnLoading.style.display = on ? 'inline' : 'none';
     }
 
+    // Plasma color stops (matplotlib plasma), to match the paper figures.
+    const PLASMA = [
+        [0.0, '#0d0887'], [0.25, '#6a00a8'], [0.5, '#b12a90'],
+        [0.75, '#e16462'], [0.9, '#fca636'], [1.0, '#f0f921']
+    ];
+
+    let plotMode = 'rank';   // 'rank' (absolute, 1 = top) or 'raw'
+
     // --- results ----------------------------------------------------------
     function displayResults(data) {
         resultsSection.style.display = 'block';
@@ -103,7 +112,10 @@ document.addEventListener('DOMContentLoaded', function () {
             data.model.name + ' · ' + data.sequence_length + ' aa · active site ' +
             data.active_residues.join(', ');
 
-        renderSummary(data);
+        // Precompute an absolute rank (1 = highest raw score) for each residue.
+        const ranked = [...data.scores].sort((a, b) => b.raw_score - a.raw_score);
+        ranked.forEach((s, i) => { s.abs_rank = i + 1; });
+        data.scores = ranked;
 
         // PDB downloads + note
         const rankBtn = document.getElementById('download-pdb-rank');
@@ -115,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
         else { note.style.display = 'none'; }
 
         populateTable(data.scores);
-        setTimeout(() => createPlot(data.scores, data.active_residues), 50);
+        setTimeout(() => createPlot(data.scores), 50);
 
         const grid = document.querySelector('.results-grid');
         if (data.has_pdb) { grid.classList.add('has-viewer'); showViewer(data); }
@@ -124,58 +136,75 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsSection.scrollIntoView({ behavior: 'smooth' });
     }
 
-    function renderSummary(data) {
-        const top = data.scores[0];
-        const nTop = data.scores.filter(s => s.is_top).length;
-        const cards = [
-            { label: 'Top-ranked residue', value: top ? (top.amino_acid + top.residue) : '—',
-              sub: top ? top.rank_score.toFixed(1) + 'th percentile' : '' },
-            { label: 'Top-decile residues', value: nTop,
-              sub: '≥ 90th percentile' },
-            { label: 'Residues scored', value: data.scores.length,
-              sub: 'excludes active site + neighbors' },
-            { label: 'Model', value: data.model.params, sub: data.model.name }
-        ];
-        document.getElementById('summary-cards').innerHTML = cards.map(c =>
-            '<div class="card"><div class="card-value">' + c.value + '</div>' +
-            '<div class="card-label">' + c.label + '</div>' +
-            '<div class="card-sub">' + c.sub + '</div></div>'
-        ).join('');
+    // Plot mode toggle
+    document.getElementById('toggle-rank').addEventListener('click', () => setPlotMode('rank'));
+    document.getElementById('toggle-raw').addEventListener('click', () => setPlotMode('raw'));
+    function setPlotMode(mode) {
+        if (mode === plotMode) return;
+        plotMode = mode;
+        document.getElementById('toggle-rank').classList.toggle('active', mode === 'rank');
+        document.getElementById('toggle-raw').classList.toggle('active', mode === 'raw');
+        document.getElementById('plot-title').textContent =
+            mode === 'rank' ? 'Attention rank by residue' : 'Raw attention score by residue';
+        if (currentData) createPlot(currentData.scores);
     }
 
-    // Plasma-like color stops to match the paper figures.
-    const PLASMA = [
-        [0.0, '#0d0887'], [0.25, '#6a00a8'], [0.5, '#b12a90'],
-        [0.75, '#e16462'], [0.9, '#fca636'], [1.0, '#f0f921']
-    ];
-
-    function createPlot(scores, activeResidues) {
+    function createPlot(scores) {
         const div = document.getElementById('attention-plot');
         if (!scores || !scores.length) { div.innerHTML = '<p class="muted">No scores to plot.</p>'; return; }
         if (typeof Plotly === 'undefined') { div.innerHTML = '<p class="muted">Plot library unavailable.</p>'; return; }
 
         const byPos = [...scores].sort((a, b) => a.residue - b.residue);
+        const isRank = plotMode === 'rank';
+        const N = scores.length;
+
+        // Color always reflects attention strength (high = warm), regardless of
+        // which y-value is shown, so the plot reads consistently with the paper.
+        const colorVals = byPos.map(s => s.rank_score);  // 0-100 percentile
+        const yVals = byPos.map(s => isRank ? s.abs_rank : s.raw_score);
+
         const trace = {
             x: byPos.map(s => s.residue),
-            y: byPos.map(s => s.rank_score),
+            y: yVals,
             type: 'scatter', mode: 'markers',
             marker: {
                 size: byPos.map(s => s.is_top ? 9 : 6),
-                color: byPos.map(s => s.rank_score),
-                colorscale: PLASMA, cmin: 0, cmax: 100,
+                color: colorVals, colorscale: PLASMA, cmin: 0, cmax: 100,
                 showscale: true,
-                colorbar: { title: { text: 'Rank %', side: 'right' }, thickness: 14 },
+                colorbar: { title: { text: 'attention<br>rank %', side: 'right' }, thickness: 14 },
                 line: { width: byPos.map(s => s.is_top ? 1.2 : 0), color: '#222' }
             },
-            text: byPos.map(s => s.amino_acid + s.residue + '<br>rank ' + s.rank_score.toFixed(1) + '%'),
+            text: byPos.map(s => s.amino_acid + s.residue +
+                '<br>rank ' + s.abs_rank + ' of ' + N +
+                '<br>raw ' + s.raw_score.toFixed(5)),
             hoverinfo: 'text'
         };
+
+        let yaxis;
+        if (isRank) {
+            // Absolute rank: 1 = top. Invert so the best residue sits at the top,
+            // and pad the ends so points aren't clipped.
+            const pad = Math.max(1, Math.round(N * 0.04));
+            yaxis = {
+                title: 'Attention rank (1 = highest)',
+                range: [N + pad, 1 - pad],   // reversed
+                gridcolor: '#eee', zeroline: false
+            };
+        } else {
+            const maxRaw = Math.max.apply(null, byPos.map(s => s.raw_score));
+            const minRaw = Math.min.apply(null, byPos.map(s => s.raw_score));
+            const span = (maxRaw - minRaw) || maxRaw || 1;
+            yaxis = {
+                title: 'Raw attention score',
+                range: [Math.min(0, minRaw - span * 0.05), maxRaw + span * 0.08],
+                gridcolor: '#eee', zeroline: false
+            };
+        }
+
         const layout = {
-            margin: { t: 10, b: 50, l: 55, r: 90 },
+            margin: { t: 10, b: 50, l: 65, r: 90 },
             xaxis: { title: 'Residue number', gridcolor: '#eee', zeroline: false },
-            yaxis: { title: 'Attention rank percentile', range: [0, 100], gridcolor: '#eee', zeroline: false },
-            shapes: [{ type: 'line', x0: byPos[0].residue, x1: byPos[byPos.length - 1].residue,
-                       y0: 90, y1: 90, line: { color: '#aaa', width: 1, dash: 'dot' } }],
+            yaxis: yaxis,
             paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#fafafa'
         };
         Plotly.newPlot('attention-plot', [trace], layout,
@@ -192,8 +221,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + (i + 1) + '</td>' +
                 '<td>' + s.residue + '</td>' +
                 '<td>' + s.amino_acid + '</td>' +
-                '<td><div class="bar-cell"><span class="bar" style="width:' + s.rank_score + '%"></span>' +
-                    '<span class="bar-num">' + s.rank_score.toFixed(1) + '</span></div></td>' +
                 '<td>' + s.raw_score.toFixed(5) + '</td>';
             tbody.appendChild(tr);
         });
@@ -217,12 +244,10 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/api/download/pdb_rank/' + data.job_id).then(r => r.text()).then(pdb => {
             const viewer = $3Dmol.createViewer(el, { backgroundColor: 'white' });
             viewer.addModel(pdb, 'pdb');
-            // Color cartoon by B-factor (= rank percentile) on a plasma-like gradient.
-            viewer.setStyle({}, { cartoon: { colorscheme: {
-                prop: 'b',
-                gradient: 'roygb',
-                min: 0, max: 100
-            } } });
+            // Color cartoon by B-factor (= rank percentile) on a plasma gradient.
+            const plasma = ['#0d0887', '#6a00a8', '#b12a90', '#e16462', '#fca636', '#f0f921'];
+            const grad = new $3Dmol.Gradient.CustomLinear(0, 100, plasma);
+            viewer.setStyle({}, { cartoon: { colorscheme: { prop: 'b', gradient: grad } } });
             // Mark active-site residues as red sticks.
             (data.active_residues || []).forEach(r => {
                 viewer.setStyle({ resi: r }, { stick: { color: 'red' }, cartoon: { color: 'red' } });
