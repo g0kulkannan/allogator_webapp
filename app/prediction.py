@@ -15,6 +15,7 @@ with an LRU cap so a small instance keeps at most one model resident.
 import gc
 import os
 import threading
+import time
 from collections import OrderedDict
 from typing import Dict, List, Optional
 
@@ -29,9 +30,15 @@ from .models import DEFAULT_MODEL_KEY, ModelSpec, get_spec
 # small instance. Override with ALLOGATOR_MAX_MODELS.
 MAX_RESIDENT_MODELS = int(os.environ.get("ALLOGATOR_MAX_MODELS", "1"))
 
-# LRU cache of key -> loaded backend. Guarded by a lock because FastAPI may
-# call in from multiple threads.
+# Unload models from RAM after this many seconds with no predictions, so an
+# idle service drops back to a small footprint. 0 disables idle unloading.
+# The next prediction transparently reloads the model on demand.
+IDLE_UNLOAD_SECONDS = int(os.environ.get("ALLOGATOR_IDLE_UNLOAD_SECONDS", "900"))
+
+# LRU cache of key -> loaded backend, plus last-use timestamps. Guarded by a
+# lock because FastAPI may call in from multiple threads.
 _loaded: "OrderedDict[str, object]" = OrderedDict()
+_last_used: "Dict[str, float]" = {}
 _load_lock = threading.Lock()
 
 
@@ -47,16 +54,19 @@ def load_backend(model_key: Optional[str] = None):
     with _load_lock:
         if key in _loaded:
             _loaded.move_to_end(key)
+            _last_used[key] = time.monotonic()
             return _loaded[key], spec
 
         print(f"Loading model '{spec.name}' ({spec.params}, backend={spec.backend})...")
         backend = build_backend(spec)
         _loaded[key] = backend
         _loaded.move_to_end(key)
+        _last_used[key] = time.monotonic()
         print(f"Model '{spec.name}' ready.")
 
         while len(_loaded) > MAX_RESIDENT_MODELS:
             old_key, _ = _loaded.popitem(last=False)
+            _last_used.pop(old_key, None)
             print(f"Evicting model '{old_key}' to free memory")
             _free_memory()
 
@@ -71,6 +81,59 @@ def _free_memory() -> None:
             torch.cuda.empty_cache()
     except Exception:
         pass
+
+
+def unload_idle_models(idle_seconds: Optional[int] = None) -> List[str]:
+    """
+    Unload any model not used within `idle_seconds`, freeing its RAM. Returns
+    the keys that were unloaded. Called by the background reaper thread.
+    """
+    if idle_seconds is None:
+        idle_seconds = IDLE_UNLOAD_SECONDS
+    if idle_seconds <= 0:
+        return []
+    now = time.monotonic()
+    unloaded = []
+    with _load_lock:
+        for key in list(_loaded.keys()):
+            if now - _last_used.get(key, now) >= idle_seconds:
+                _loaded.pop(key, None)
+                _last_used.pop(key, None)
+                unloaded.append(key)
+        if unloaded:
+            _free_memory()
+    for key in unloaded:
+        print(f"Unloaded idle model '{key}' after {idle_seconds}s of inactivity")
+    return unloaded
+
+
+def loaded_model_keys() -> List[str]:
+    """Keys of models currently resident in RAM (for diagnostics)."""
+    with _load_lock:
+        return list(_loaded.keys())
+
+
+def start_idle_reaper() -> Optional[threading.Thread]:
+    """
+    Launch a daemon thread that periodically unloads idle models. No-op (and
+    returns None) if idle unloading is disabled.
+    """
+    if IDLE_UNLOAD_SECONDS <= 0:
+        return None
+
+    def _reap():
+        # Check at a fraction of the idle window, bounded to a sane range.
+        interval = max(30, min(IDLE_UNLOAD_SECONDS // 3, 300))
+        while True:
+            time.sleep(interval)
+            try:
+                unload_idle_models()
+            except Exception as e:
+                print(f"Idle reaper error: {e}")
+
+    t = threading.Thread(target=_reap, name="model-idle-reaper", daemon=True)
+    t.start()
+    return t
 
 
 def preload_default() -> None:

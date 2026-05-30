@@ -62,6 +62,8 @@ they're cached).
 | Variable | Default | Purpose |
 |---|---|---|
 | `ALLOGATOR_MAX_MODELS` | `1` | Max models resident in memory at once (LRU eviction). Keep at `1` on a small instance. |
+| `ALLOGATOR_IDLE_UNLOAD_SECONDS` | `900` | Unload models from RAM after this many seconds with no predictions; the next request reloads on demand. `0` disables. |
+| `ALLOGATOR_WARM_ON_START` | unset | If truthy, warm ESM-1b in a background thread at boot (never blocks startup). Leave unset to load lazily. |
 | `ALLOGATOR_CACHE_DIR` | system temp | Where job results / generated PDBs are stored. |
 | `ALLOGATOR_CACHE_TTL` | `21600` | Job retention in seconds (6 h). |
 | `ALLOGATOR_CACHE_MAX` | `200` | Max stored jobs before oldest are pruned. |
@@ -71,7 +73,36 @@ they're cached).
 > ProtT5-XL ~3 GB, ESM++ ~2.4 GB in fp32). With `ALLOGATOR_MAX_MODELS=1`
 > only one is resident at a time; switching models evicts and frees the
 > previous one, so peak RAM stays around a single model's footprint plus
-> overhead. A small Railway instance should keep this at `1`.
+> overhead. The server itself binds its port immediately and `/health`
+> stays fast and model-free, so the app never fails Railway's healthcheck
+> while a model is loading. `GET /health` also reports `loaded_models` so
+> you can see what is currently resident.
+
+### Idle unloading
+
+By default the service unloads a model after 15 minutes of no predictions,
+returning to a small idle footprint; the next prediction transparently
+reloads it (slower, then fast again while in use). Tune the window with
+`ALLOGATOR_IDLE_UNLOAD_SECONDS`, or set it to `0` to keep models resident.
+
+### Persisting model weights across restarts (Railway volume)
+
+Railway's container filesystem is ephemeral, so by default ProtT5 / ESM++
+weights re-download after every redeploy or restart. To cache them
+permanently, attach a **Volume** and point the model caches at it:
+
+1. In the Railway service, add a Volume mounted at e.g. `/data`.
+2. Set these variables so weights land on the volume:
+   ```
+   HF_HOME=/data/hf          # ProtT5 + ESM++ (HuggingFace) weights
+   TORCH_HOME=/data/torch    # ESM-1b / ESM-2 (fair-esm) weights
+   ```
+3. Redeploy. The first user to pick each model pays the download once; it
+   persists on the volume thereafter.
+
+This is the lighter-weight alternative to baking all four models into the
+image via `PREDOWNLOAD_MODELS` (which makes a much larger, slower-building
+image but gives instant cold starts).
 
 ## API
 

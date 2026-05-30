@@ -27,10 +27,12 @@ from .models import DEFAULT_MODEL_KEY, get_spec, list_public_models
 from .pdb_utils import get_colored_pdbs
 from .prediction import (
     compute_attention_scores,
+    loaded_model_keys,
     parse_active_residues,
     preload_default,
     scores_to_csv,
     scores_to_json,
+    start_idle_reaper,
 )
 
 VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
@@ -54,6 +56,8 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 print(f"Warning: background model warm failed: {e}")
         threading.Thread(target=_warm, daemon=True).start()
+    # Periodically unload idle models so an unused service drops its RAM.
+    start_idle_reaper()
     yield
 
 
@@ -296,4 +300,6 @@ async def download_pdb_rank(job_id: str):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    # Stays fast and model-free so Railway's healthcheck always passes; also
+    # reports which models are currently resident in RAM for diagnostics.
+    return {"status": "healthy", "loaded_models": loaded_model_keys()}
