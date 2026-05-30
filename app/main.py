@@ -7,12 +7,15 @@ example metadata, a prediction endpoint, and CSV / JSON / FASTA / PDB
 downloads.
 """
 
+import os
 import re
+import threading
 import uuid
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -35,13 +38,22 @@ VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Warm the recommended model at startup (best-effort)."""
-    print("Pre-loading recommended model...")
-    try:
-        preload_default()
-        print("Recommended model ready.")
-    except Exception as e:  # don't block startup if weights can't load
-        print(f"Warning: could not pre-load default model: {e}")
+    """
+    Start the server immediately. Loading a model is heavy (~2.6 GB) and must
+    never block the server from binding its port, or Railway's proxy reports
+    "Application failed to respond". The recommended model is therefore warmed
+    in a background thread, and only if ALLOGATOR_WARM_ON_START is truthy;
+    otherwise it loads lazily on the first prediction.
+    """
+    if os.environ.get("ALLOGATOR_WARM_ON_START", "").lower() in ("1", "true", "yes"):
+        def _warm():
+            try:
+                print("Warming recommended model in background...")
+                preload_default()
+                print("Recommended model ready.")
+            except Exception as e:
+                print(f"Warning: background model warm failed: {e}")
+        threading.Thread(target=_warm, daemon=True).start()
     yield
 
 
@@ -146,8 +158,11 @@ async def predict(request: PredictionRequest):
                 detail=f"Active-site residues out of range (1-{seq_len}): {out_of_range}",
             )
 
-        result = compute_attention_scores(
-            request.sequence, active_residues, model_key=request.model
+        # Model load + inference is CPU-heavy and blocking; run it off the
+        # event loop so /health and other requests stay responsive.
+        result = await run_in_threadpool(
+            compute_attention_scores,
+            request.sequence, active_residues, request.model,
         )
 
         job_id = uuid.uuid4().hex[:8]
@@ -156,8 +171,9 @@ async def predict(request: PredictionRequest):
         has_pdb = False
         pdb_error = None
         if request.pdb_code:
-            _, pdb_raw, pdb_rank = get_colored_pdbs(
-                request.pdb_code, result["scores"], active_residues
+            _, pdb_raw, pdb_rank = await run_in_threadpool(
+                get_colored_pdbs,
+                request.pdb_code, result["scores"], active_residues,
             )
             has_pdb = pdb_raw is not None
             if not has_pdb:

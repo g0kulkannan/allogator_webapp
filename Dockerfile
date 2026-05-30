@@ -7,7 +7,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps first, for layer caching
+# Install the CPU-only torch wheel first (the default wheel pulls ~2 GB of
+# CUDA libraries that are useless on a CPU instance and bloat the image).
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
+
+# Remaining Python deps. torch is already satisfied, so it won't be re-pulled.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
