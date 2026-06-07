@@ -4,12 +4,10 @@ AlloGator - model registry.
 Defines the protein language models the web app can run. These are the four
 models compared in the paper (Kannan et al., Cell Systems):
 
-  * ESM-1b      - recommended; highest median per-protein AUROC in the paper.
-  * ESM-2 650M  - same size as ESM-1b, trained for contact prediction;
-                  slightly weaker allosteric signal.
-  * ProtT5      - an independently trained T5-encoder masked LM; comparable
-                  to ESM-1b, shows the signal is not ESM-specific.
-  * ESM++       - a faithful open re-implementation of ESM-C (~600M).
+  * ESM-1b      - 650M-parameter ESM protein language model (default).
+  * ESM-2 650M  - 650M-parameter ESM-2 protein language model.
+  * ProtT5      - T5-encoder protein language model.
+  * ESM++       - open re-implementation of ESM-C (~600M).
 
 Each model is loaded lazily and on demand (see prediction.py / backends.py),
 so the container only pays the memory cost of a model once it is selected.
@@ -65,8 +63,6 @@ _register(ModelSpec(
     approx_ram_gb=2.6,
     num_layers=33,
     recommended=True,
-    blurb="Recommended. Highest median per-protein AUROC in the paper; "
-          "best overall allosteric signal.",
     aliases=["esm-1b", "esm1b_t33_650M_UR50S"],
 ))
 
@@ -83,8 +79,6 @@ _register(ModelSpec(
     params="650M",
     approx_ram_gb=2.6,
     num_layers=33,
-    blurb="Same size as ESM-1b but trained for contact prediction; "
-          "slightly weaker allosteric signal in the paper.",
     aliases=["esm2", "esm-2", "esm2_t33_650M_UR50D"],
 ))
 
@@ -95,8 +89,6 @@ _register(ModelSpec(
     source="Rostlab/prot_t5_xl_half_uniref50-enc",
     params="~3B",
     approx_ram_gb=3.0,
-    blurb="Independently trained T5-encoder model; performs comparably to "
-          "ESM-1b, showing the signal is not ESM-specific. Larger / slower.",
     aliases=["prot_t5", "prot-t5", "prott5_xl"],
 ))
 
@@ -110,8 +102,6 @@ _register(ModelSpec(
 #     source="Synthyra/ESMplusplus_large",
 #     params="~600M",
 #     approx_ram_gb=2.4,
-#     blurb="Open re-implementation of ESM-C. Trained for contact prediction; "
-#           "underperforms ESM-1b on allosteric signal in the paper.",
 #     aliases=["esm++", "esmc", "esm-c", "esmplusplus"],
 # ))
 
