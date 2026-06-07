@@ -7,28 +7,27 @@ to the active site; high-attention, non-contacting residues tend to be
 allosteric.
 
 Method and benchmarks: Kannan et al., *Single-Sequence, Structure-Free
-Allosteric Residue Prediction with Protein Language Models*, Cell Systems
-(in revision). Code & data: <https://github.com/g0kulkannan/allogator>.
+Allosteric Residue Prediction with Protein Language Models*, bioRxiv (2024),
+doi:[10.1101/2024.10.03.616547](https://doi.org/10.1101/2024.10.03.616547).
+Code & data: <https://github.com/g0kulkannan/allogator_webapp>.
 
 ---
 
 ## What it does
 
-- **ESM-1b** (recommended — highest median per-protein AUROC in the paper).
-  The other three models from the paper (ESM-2 650M, ProtT5-XL, ESM++) are
-  present in the code but disabled for the live deployment to keep the image
-  small and reliable on a small instance; re-enable them in `app/models.py`
-  (and re-add the HuggingFace deps) once you have more memory and a persistent
-  volume. The model loads **lazily on the first prediction** — the server
-  itself boots instantly.
+- **Four selectable models.** ESM-1b (default), an ESM-1b variant that averages
+  attention over only the late layers (28-32), ESM-2 650M, and ProtT5-XL. (ESM++
+  from the paper stays disabled in `app/models.py`.) Each model loads **lazily on
+  the first prediction** that selects it — the server itself boots instantly, and
+  only one model is held in memory at a time.
 - **Clear scores.** Results lead with the **rank percentile** (the paper's
   headline metric), flag the top decile, and show a per-residue plot, a 3D
   structure view, and a sortable/filterable table.
 - **Easy downloads.** CSV (with a run header), JSON, a top-residues TSV, and
   PDB files whose B-factor column carries the score (rank- and raw-colored) for
   one-command coloring in PyMOL / ChimeraX / Mol*.
-- **One-click examples.** DPP4, ACE2, and *B. longum* L-LDH from the paper,
-  pre-filled with their UniProt active sites.
+- **One-click examples.** HK1, *B. longum* L-LDH, and PFK-1 from the paper,
+  pre-filled with their active sites.
 
 ## Run locally
 
@@ -49,16 +48,18 @@ The repo is Railway-ready (`railway.json` + `Dockerfile`).
 2. It builds the Docker image and starts the server on `$PORT` automatically.
 3. Health checks hit `/health`.
 
-By default the image **bakes in ESM-1b** at build time so the first request is
-fast. To change which model(s) are pre-downloaded, set the build arg:
+By default the image does **not** bake in any model weights (baking produced a
+large, slow-building image) — every model downloads on first use and is then
+cached. To bake one in for instant cold starts instead, uncomment the
+`PREDOWNLOAD_MODELS` step in the `Dockerfile`:
 
 ```
 PREDOWNLOAD_MODELS="esm1b"   # space-separated keys, or "" to skip
 ```
 
-Only ESM-1b is baked in by default. ProtT5-XL and ESM++ are large; they
-download on first use (the first request that selects them is slow, then
-they're cached).
+Because weights download on first use, the first request that selects a given
+model is slow; afterward it's cached (persist it across restarts with a Railway
+volume — see below).
 
 ### Useful environment variables
 

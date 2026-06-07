@@ -16,7 +16,7 @@ import) so it can be imported anywhere cheaply.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,9 @@ class ModelSpec:
     params: str              # approximate parameter count, for display
     approx_ram_gb: float     # rough resident size once loaded (fp32, CPU)
     num_layers: int = 0      # last-layer index for esm backend (0 = use all)
+    # Restrict attention averaging to a contiguous block of transformer layers,
+    # given 1-indexed inclusive (e.g. (28, 32) = layers 28-32). None = all layers.
+    layer_range: Optional[Tuple[int, int]] = None
     recommended: bool = False
     blurb: str = ""          # one-line trade-off summary for the UI
     aliases: List[str] = field(default_factory=list)
@@ -64,6 +67,21 @@ _register(ModelSpec(
     num_layers=33,
     recommended=True,
     aliases=["esm-1b", "esm1b_t33_650M_UR50S"],
+))
+
+# Same ESM-1b weights, but averaging attention over only the late transformer
+# layers (28-32) instead of all 33. Offered as a separate, selectable option;
+# the all-layer ESM-1b above remains the default.
+_register(ModelSpec(
+    key="esm1b_late",
+    name="ESM-1b (layers 28-32)",
+    backend="esm",
+    source="esm1b_t33_650M_UR50S",
+    params="650M",
+    approx_ram_gb=2.6,
+    num_layers=33,
+    layer_range=(28, 32),
+    aliases=["esm1b-late", "esm1b_28_32"],
 ))
 
 # ESM-1b is the recommended default. ESM-2 650M and ProtT5-XL are also offered

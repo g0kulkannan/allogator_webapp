@@ -14,14 +14,17 @@ def test_model_registry():
     from app import models
     pub = models.list_public_models()
     keys = {m["key"] for m in pub}
-    # Live deployment registers ESM-1b (default), ESM-2 650M and ProtT5.
+    # Live deployment registers ESM-1b (default, all layers), an ESM-1b
+    # late-layers (28-32) variant, ESM-2 650M and ProtT5.
     # ESM++ stays disabled in models.py.
-    assert keys == {"esm1b", "esm2_650m", "prott5"}
+    assert keys == {"esm1b", "esm1b_late", "esm2_650m", "prott5"}
     rec = [m for m in pub if m["recommended"]]
     assert len(rec) == 1 and rec[0]["key"] == "esm1b"
     assert models.DEFAULT_MODEL_KEY == "esm1b"
     assert models.get_spec(None).key == "esm1b"
     assert models.get_spec("esm1b").backend == "esm"
+    assert models.get_spec("esm1b").layer_range is None
+    assert models.get_spec("esm1b_late").layer_range == (28, 32)
     assert models.get_spec("esm2_650m").backend == "esm"
     assert models.get_spec("prott5").backend == "prott5"
     # alias resolution

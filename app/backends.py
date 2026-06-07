@@ -46,6 +46,7 @@ class _EsmBackend:
         self.model = self.model.to(self.device).eval()
         self.batch_converter = self.alphabet.get_batch_converter()
         self.repr_layer = spec.num_layers
+        self.layer_range = spec.layer_range  # (lo, hi) 1-indexed inclusive, or None
         self._torch = torch
 
     def attention(self, sequence: str) -> np.ndarray:
@@ -61,6 +62,9 @@ class _EsmBackend:
             )
         # (batch, layers, heads, T, T) -> mean over heads then layers
         attn = out["attentions"][0].to(torch.float32).cpu().numpy()
+        if self.layer_range is not None:
+            lo, hi = self.layer_range  # 1-indexed inclusive
+            attn = attn[lo - 1:hi]
         mean = attn.mean(axis=1).mean(axis=0)
         return mean[1:-1, 1:-1]  # drop BOS/EOS
 
