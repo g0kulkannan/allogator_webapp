@@ -70,38 +70,38 @@ _register(ModelSpec(
     aliases=["esm-1b", "esm1b_t33_650M_UR50S"],
 ))
 
-# NOTE: Only ESM-1b is registered for the live deployment, to keep the Docker
-# image small and reliable on a small Railway instance. The other three models
-# from the paper (ESM-2 650M, ProtT5-XL, ESM++) are kept below, commented out,
-# so they can be re-enabled once the service has enough memory and a persistent
-# volume for their weights. Re-registering them also requires re-adding the
-# HuggingFace deps (transformers, sentencepiece, protobuf, einops) to
-# requirements.txt for the ProtT5 / ESM++ backends.
-#
-# _register(ModelSpec(
-#     key="esm2_650m",
-#     name="ESM-2 (650M)",
-#     backend="esm",
-#     source="esm2_t33_650M_UR50D",
-#     params="650M",
-#     approx_ram_gb=2.6,
-#     num_layers=33,
-#     blurb="Same size as ESM-1b but trained for contact prediction; "
-#           "slightly weaker allosteric signal in the paper.",
-#     aliases=["esm2", "esm-2", "esm2_t33_650M_UR50D"],
-# ))
-#
-# _register(ModelSpec(
-#     key="prott5",
-#     name="ProtT5-XL",
-#     backend="prott5",
-#     source="Rostlab/prot_t5_xl_half_uniref50-enc",
-#     params="~3B",
-#     approx_ram_gb=3.0,
-#     blurb="Independently trained T5-encoder model; performs comparably to "
-#           "ESM-1b, showing the signal is not ESM-specific. Larger / slower.",
-#     aliases=["prot_t5", "prot-t5", "prott5_xl"],
-# ))
+# ESM-1b is the recommended default. ESM-2 650M and ProtT5-XL are also offered
+# as selectable alternatives. All three lazy-download their weights on first use
+# and follow the same idle-unload pattern (see prediction.py), so only the
+# selected model is resident at a time. ProtT5 requires the HuggingFace stack
+# (transformers, sentencepiece, protobuf) in requirements.txt.
+_register(ModelSpec(
+    key="esm2_650m",
+    name="ESM-2 (650M)",
+    backend="esm",
+    source="esm2_t33_650M_UR50D",
+    params="650M",
+    approx_ram_gb=2.6,
+    num_layers=33,
+    blurb="Same size as ESM-1b but trained for contact prediction; "
+          "slightly weaker allosteric signal in the paper.",
+    aliases=["esm2", "esm-2", "esm2_t33_650M_UR50D"],
+))
+
+_register(ModelSpec(
+    key="prott5",
+    name="ProtT5-XL",
+    backend="prott5",
+    source="Rostlab/prot_t5_xl_half_uniref50-enc",
+    params="~3B",
+    approx_ram_gb=3.0,
+    blurb="Independently trained T5-encoder model; performs comparably to "
+          "ESM-1b, showing the signal is not ESM-specific. Larger / slower.",
+    aliases=["prot_t5", "prot-t5", "prott5_xl"],
+))
+
+# ESM++ (ESM-C) remains disabled for the live deployment. Re-enabling it also
+# requires re-adding the `einops` dep to requirements.txt for its backend.
 #
 # _register(ModelSpec(
 #     key="esmpp",
