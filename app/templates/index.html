@@ -18,9 +18,9 @@
         <section class="about-section">
             <p>
                 AlloGator ranks residues by how strongly a protein language model attends from them to the
-                active site. Residues with high attention but no direct contact tend to be allosteric. Give a
-                sequence and its active-site residues; AlloGator returns a per-residue allosteric score with no
-                structure or alignment required.
+                active site. Residues with high attention to the active site, but no direct contact, tend to be
+                allosteric. Provide a protein sequence and the corresponding active site residues (1-indexed),
+                and AlloGator will return a per-residue allosteric score using language model attention.
             </p>
             <div class="citation-box">
                 <strong>Citation:</strong> Kannan et al., <em>Single-Sequence, Structure-Free Allosteric Residue
@@ -37,7 +37,7 @@
                     <div class="examples-inline">
                         <label for="example-select">Load example:</label>
                         <select id="example-select">
-                            <option value="">— choose a paper protein —</option>
+                            <option value="">— choose an example protein —</option>
                         </select>
                     </div>
                 </div>
