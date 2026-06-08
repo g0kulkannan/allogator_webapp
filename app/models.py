@@ -69,19 +69,19 @@ _register(ModelSpec(
     aliases=["esm-1b", "esm1b_t33_650M_UR50S"],
 ))
 
-# Same ESM-1b weights, but averaging attention over only the late transformer
-# layers (28-32) instead of all 33. Offered as a separate, selectable option;
-# the all-layer ESM-1b above remains the default.
+# Same ESM-1b weights, but averaging attention over only the last three
+# transformer layers (31-33) instead of all 33. Offered as a separate,
+# selectable option; the all-layer ESM-1b above remains the default.
 _register(ModelSpec(
     key="esm1b_late",
-    name="ESM-1b (layers 28-32)",
+    name="ESM-1b (layers 31-33)",
     backend="esm",
     source="esm1b_t33_650M_UR50S",
     params="650M",
     approx_ram_gb=2.6,
     num_layers=33,
-    layer_range=(28, 32),
-    aliases=["esm1b-late", "esm1b_28_32"],
+    layer_range=(31, 33),
+    aliases=["esm1b-late", "esm1b_31_33"],
 ))
 
 # ESM-1b is the recommended default. ESM-2 650M and ProtT5-XL are also offered

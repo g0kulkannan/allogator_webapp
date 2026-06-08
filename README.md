@@ -16,7 +16,7 @@ Code & data: <https://github.com/g0kulkannan/allogator_webapp>.
 ## What it does
 
 - **Four selectable models.** ESM-1b (default), an ESM-1b variant that averages
-  attention over only the late layers (28-32), ESM-2 650M, and ProtT5-XL. (ESM++
+  attention over only the last three layers (31-33), ESM-2 650M, and ProtT5-XL. (ESM++
   from the paper stays disabled in `app/models.py`.) Each model loads **lazily on
   the first prediction** that selects it — the server itself boots instantly, and
   only one model is held in memory at a time.
