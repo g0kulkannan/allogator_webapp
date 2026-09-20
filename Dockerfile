@@ -9,7 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install the CPU-only torch wheel first (the default wheel pulls ~2 GB of
 # CUDA libraries that are useless on a CPU instance and bloat the image).
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
+# Include PyPI so isolated builds can resolve dependencies such as flit_core.
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple \
+    torch
 
 # Remaining Python deps. torch is already satisfied, so it won't be re-pulled.
 COPY requirements.txt .
