@@ -3,8 +3,8 @@ AlloGator - attention-based allosteric residue scoring.
 
 Implements the scoring procedure from Kannan et al., Cell Systems:
 for a single input sequence, take the mean attention map across all heads
-and layers of a protein language model, sum each residue's attention to
-the active-site residues, exclude residues sequence-adjacent to the active
+and layers of a protein language model, sum attention from the active-site
+residues to each candidate residue, exclude residues sequence-adjacent to the active
 site, and rank the remainder. Higher rank = more likely allosteric.
 
 The model-specific work (loading, tokenization, attention extraction) lives

@@ -17,8 +17,8 @@
 
         <section class="about-section">
             <p>
-                AlloGator ranks residues by how strongly a protein language model attends from them to the
-                active site. Residues with high attention to the active site, but no direct contact, tend to be
+                AlloGator ranks residues by the attention they receive from the active-site residues in a
+                protein language model. Residues with high attention from the active site, but no direct contact, tend to be
                 allosteric. Provide a protein sequence and the corresponding active site residues (1-indexed),
                 and AlloGator will return a per-residue allosteric score using language model attention.
             </p>
@@ -60,7 +60,7 @@
                         <label for="active-residues">Active-site residues</label>
                         <input type="text" id="active-residues" name="active_residues"
                             placeholder="e.g., 630, 708, 740   (ranges like 124-126 allowed)" required>
-                        <span class="help-text">1-indexed positions of the catalytic / active site. Attention is summed toward these.</span>
+                        <span class="help-text">1-indexed positions of the catalytic / active site. Attention from these residues is summed for each candidate residue.</span>
                     </div>
 
                     <div class="form-group">

@@ -2,8 +2,8 @@
 
 Predict allosteric residues from a **single protein sequence** using protein
 language-model attention. Given a sequence and its active-site residues,
-AlloGator scores every other residue by how strongly the model attends from it
-to the active site; high-attention, non-contacting residues tend to be
+AlloGator scores every other residue by the attention it receives from the
+active-site residues; high-attention, non-contacting residues tend to be
 allosteric.
 
 Method and benchmarks: Kannan et al., *Single-Sequence, Structure-Free
